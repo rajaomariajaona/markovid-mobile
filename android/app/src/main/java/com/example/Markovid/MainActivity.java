@@ -1,4 +1,4 @@
-package com.example.markovid;
+package com.example.Markovid;
 
 import io.flutter.embedding.android.FlutterActivity;
 
