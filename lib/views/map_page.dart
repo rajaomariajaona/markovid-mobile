@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flappy_search_bar/flappy_search_bar.dart';
 import 'package:flappy_search_bar/search_bar_style.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +8,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong/latlong.dart';
 import 'package:location/location.dart';
 import 'package:map_controller/map_controller.dart';
+import 'package:Markovid/request.dart';
 
 class MapPage extends StatelessWidget {
   @override
@@ -89,11 +91,22 @@ class __MapPageContentState extends State<_MapPageContent> {
         name: "myLocation");
   }
 
-  final SearchBarController<Fokontany> _searchBarController = SearchBarController();
+  final SearchBarController<Fokontany> _searchBarController =
+      SearchBarController();
   bool isReplay = false;
 
   Future<List<Fokontany>> _getFokontany(String text) async {
-    
+    Dio dio = await RestRequest().getDioInstance();
+    Response res = await dio.get("/?nom=$text");
+    List<Fokontany> liste = [];
+    for (dynamic d in res.data) {
+      liste.add(Fokontany(
+          centre: d["centre"],
+          id: d["id"],
+          nom: d["nom"],
+          province: d["province"]));
+    }
+    return liste;
   }
 
   @override
@@ -113,7 +126,7 @@ class __MapPageContentState extends State<_MapPageContent> {
               additionalOptions: {
                 'accessToken':
                     'pk.eyJ1IjoicmFqYW9tYXJpYWphb25hIiwiYSI6ImNrYmptYmplNzBxZ2syeWxzZGpqazM5OTgifQ.o0gKXrpg0veDwXuvooRmRA',
-                'id': 'rajaomaria/ckbjppdr600h81iqj3lczkbon',
+                'id': 'rajaomariajaona/ckbjppdr600h81iqj3lczkbon',
               },
             ),
             MarkerLayerOptions(
@@ -121,6 +134,7 @@ class __MapPageContentState extends State<_MapPageContent> {
             ),
           ],
         ),
+        buildContainer(context),
         Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: <Widget>[
@@ -150,39 +164,37 @@ class __MapPageContentState extends State<_MapPageContent> {
             ),
           ],
         ),
-        buildContainer(context),
       ],
     );
   }
 
-  Container buildContainer(BuildContext context) {
-    return Container(
-      child: SearchBar<Fokontany>(
-        searchBarPadding: EdgeInsets.all(20),
-        listPadding: EdgeInsets.symmetric(horizontal: 10),
-        searchBarStyle: SearchBarStyle(
-            backgroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4)),
-        onSearch: _getFokontany,
-        searchBarController: _searchBarController,
-        cancellationWidget: Icon(Icons.close),
-        mainAxisSpacing: 0,
-        crossAxisCount: 1,
-        onItemFound: (Fokontany fokontany, int index) {
-          return Card(
-            color: Colors.white,
-            child: ListTile(
-              title: Text("${fokontany.nom}, ${fokontany.province}"),
-              onTap: () {
-                statefulMapController.mapController.move(
-                    LatLng(fokontany.centre["coordinates"][1],
-                        fokontany.centre["coordinates"][0]),
-                    statefulMapController.mapController.zoom);
-              },
-            ),
-          );
-        },
-      ),
+  Widget buildContainer(BuildContext context) {
+    return SearchBar<Fokontany>(
+      searchBarPadding: EdgeInsets.all(20),
+      listPadding: EdgeInsets.symmetric(horizontal: 10),
+      searchBarStyle: SearchBarStyle(
+          backgroundColor: Colors.white,
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4)),
+      onSearch: _getFokontany,
+      searchBarController: _searchBarController,
+      cancellationWidget: Icon(Icons.close),
+      mainAxisSpacing: 0,
+      crossAxisCount: 1,
+      onItemFound: (Fokontany fokontany, int index) {
+        return Card(
+          color: Colors.white,
+          child: ListTile(
+            title: Text("${fokontany.nom}, ${fokontany.province}"),
+            onTap: () {
+              _searchBarController.clear();
+              statefulMapController.mapController.move(
+                  LatLng(fokontany.centre["coordinates"][1],
+                      fokontany.centre["coordinates"][0]),
+                  15);
+            },
+          ),
+        );
+      },
     );
   }
 }
