@@ -57,9 +57,6 @@ class MyDrawer extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           Spacer(),
-          RaisedButton(onPressed: () {
-            context.read<FokontanyProvider>().fetchZone();
-          })
         ],
       ),
     );

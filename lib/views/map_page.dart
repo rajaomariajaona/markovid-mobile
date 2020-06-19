@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:Markovid/provider/fokontany_provider.dart';
+import 'package:Markovid/provider/socket_provider.dart';
 import 'package:Markovid/views/drawer.dart';
 import 'package:Markovid/views/search_widget.dart';
 import 'package:flutter/material.dart';
@@ -82,6 +83,9 @@ class __MapPageContentState extends State<_MapPageContent> {
     statefulMapController = StatefulMapController(mapController: mapController);
     statefulMapController.onReady.then((_) async {
       isReady = true;
+      context.read<SocketProvider>().addListener(() {
+        context.read<FokontanyProvider>().fetchZone();
+      });
       context.read<FokontanyProvider>().addListener(_addZone, ['zone']);
       context.read<FokontanyProvider>().fetchZone();
     });
