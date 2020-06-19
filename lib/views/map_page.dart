@@ -1,36 +1,53 @@
 import 'dart:async';
-import 'package:dio/dio.dart';
-import 'package:flappy_search_bar/flappy_search_bar.dart';
-import 'package:flappy_search_bar/search_bar_style.dart';
+import 'package:Markovid/provider/fokontany_provider.dart';
+import 'package:Markovid/views/search_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong/latlong.dart';
 import 'package:location/location.dart';
 import 'package:map_controller/map_controller.dart';
-import 'package:Markovid/request.dart';
+import 'package:provider/provider.dart';
+
+class MapPageController {
+  void Function() goToMyLocation;
+}
 
 class MapPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final MapPageController controller = MapPageController();
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          controller.goToMyLocation();
+        },
+        child: Icon(Icons.location_searching),
+      ),
       body: SafeArea(
-        child: _MapPageContent(),
+        child: _MapPageContent(
+          key: key,
+          mapPageController: controller,
+        ),
       ),
     );
   }
 }
 
 class _MapPageContent extends StatefulWidget {
-  _MapPageContent({
-    Key key,
-  }) : super(key: key);
+  _MapPageContent({Key key, @required this.mapPageController})
+      : super(key: key);
+  final MapPageController mapPageController;
 
   @override
-  __MapPageContentState createState() => __MapPageContentState();
+  __MapPageContentState createState() =>
+      __MapPageContentState(mapPageController);
 }
 
 class __MapPageContentState extends State<_MapPageContent> {
+  __MapPageContentState(MapPageController mapPageController) {
+    mapPageController.goToMyLocation = goToMyLocation;
+  }
   MapController mapController;
 
   StatefulMapController statefulMapController;
@@ -43,8 +60,6 @@ class __MapPageContentState extends State<_MapPageContent> {
 
   PermissionStatus _permissionGranted;
 
-  LocationData _locationData;
-
   IconData iconData = Icons.mic;
 
   bool isReady = false;
@@ -54,36 +69,71 @@ class __MapPageContentState extends State<_MapPageContent> {
     // intialize the controllers
     mapController = MapController();
     statefulMapController = StatefulMapController(mapController: mapController);
-    statefulMapController.onReady.then((_) => isReady = true);
+    statefulMapController.onReady.then((_) async {
+      isReady = true;
+      context.read<FokontanyProvider>().addListener(_addZone, ['zone']);
+      context.read<FokontanyProvider>().fetchZone();
+    });
     sub = statefulMapController.changeFeed.listen((change) => setState(() {}));
     super.initState();
   }
 
+  _addZone() {
+    statefulMapController.namedPolygons.keys.forEach((String key) {
+      if (key.startsWith('MG')) statefulMapController.removePolygon(key);
+    });
+    statefulMapController.removeMarkers(
+        names: statefulMapController.namedMarkers.keys
+            .where((String key) => key.startsWith('MG'))
+            .toList());
+    context.read<FokontanyProvider>().zoneRouge.forEach((element) {
+      statefulMapController.addMarker(
+          marker: element.getCentreMarker(), name: element.name);
+      statefulMapController.addPolygon(
+        name: element.name,
+        points: element.points,
+        color: element.color,
+        borderColor: element.borderColor,
+        borderWidth: element.borderWidth,
+      );
+    });
+    context.read<FokontanyProvider>().zoneJaune.forEach((element) {
+      statefulMapController.addMarker(
+          marker: element.getCentreMarker(), name: element.name);
+      statefulMapController.addPolygon(
+        name: element.name,
+        points: element.points,
+        color: element.color,
+        borderColor: element.borderColor,
+        borderWidth: element.borderWidth,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    sub.cancel();
+    super.dispose();
+  }
+
   Future<void> goToMyLocation() async {
     if (!isReady) return;
-    _serviceEnabled = await location.serviceEnabled();
-    if (!_serviceEnabled) {
-      _serviceEnabled = await location.requestService();
-      if (!_serviceEnabled) {
-        return;
-      }
-    }
+    if (!await _isServiceEnabled()) return;
+    if (!await _hasPermission()) return;
+    LatLng myLocation = await _getMyLocation();
+    await _moveAndMark(myLocation);
+  }
 
-    _permissionGranted = await location.hasPermission();
-    if (_permissionGranted == PermissionStatus.denied) {
-      _permissionGranted = await location.requestPermission();
-      if (_permissionGranted != PermissionStatus.granted) {
-        return;
-      }
-    }
-
-    _locationData = await location.getLocation();
-    statefulMapController.mapController.move(
-        LatLng(_locationData.latitude, _locationData.longitude),
-        mapController.zoom);
-    statefulMapController.removeMarker(name: "myLocation");
-    statefulMapController.addMarker(
+  Future _moveAndMark(LatLng myLocation) async {
+    print(statefulMapController.zoom);
+    statefulMapController.centerOnPoint(myLocation);
+    statefulMapController.zoomTo(16);
+    try {
+      await statefulMapController.removeMarker(name: "myLocation");
+    } catch (e) {}
+    await statefulMapController.addMarker(
         marker: Marker(
+            point: myLocation,
             builder: (ctx) => Icon(
                   Icons.location_on,
                   color: Colors.blue,
@@ -91,22 +141,26 @@ class __MapPageContentState extends State<_MapPageContent> {
         name: "myLocation");
   }
 
-  final SearchBarController<Fokontany> _searchBarController =
-      SearchBarController();
-  bool isReplay = false;
+  Future<LatLng> _getMyLocation() async {
+    LocationData _locationData = await location.getLocation();
+    return LatLng(_locationData.latitude, _locationData.longitude);
+  }
 
-  Future<List<Fokontany>> _getFokontany(String text) async {
-    Dio dio = await RestRequest().getDioInstance();
-    Response res = await dio.get("/?nom=$text");
-    List<Fokontany> liste = [];
-    for (dynamic d in res.data) {
-      liste.add(Fokontany(
-          centre: d["centre"],
-          id: d["id"],
-          nom: d["nom"],
-          province: d["province"]));
+  Future<bool> _hasPermission() async {
+    _permissionGranted = await location.hasPermission();
+    if (_permissionGranted != PermissionStatus.granted) {
+      _permissionGranted = await location.requestPermission();
     }
-    return liste;
+    return _permissionGranted == PermissionStatus.granted;
+  }
+
+  Future<bool> _isServiceEnabled() async {
+    _serviceEnabled = await location.serviceEnabled();
+    if (!_serviceEnabled) {
+      _serviceEnabled = await location.requestService();
+      return _serviceEnabled;
+    }
+    return _serviceEnabled;
   }
 
   @override
@@ -116,7 +170,23 @@ class __MapPageContentState extends State<_MapPageContent> {
         FlutterMap(
           mapController: mapController,
           options: MapOptions(
+            nePanBoundary: LatLng(-11.767007, 50.842285),
+            swPanBoundary: LatLng(-26.023899, 43.65000),
             center: LatLng(-18.91368, 47.53613),
+            minZoom: 5.760635842425313,
+            maxZoom: 20,
+            onPositionChanged: (MapPosition p, __) {
+              if (statefulMapController.namedMarkers["myLocation"] != null &&
+                  !p.bounds.contains(
+                      statefulMapController.namedMarkers["myLocation"].point))
+                statefulMapController.removeMarker(name: "myLocation");
+
+              if (statefulMapController.namedMarkers["searchedLocation"] !=
+                      null &&
+                  !p.bounds.contains(statefulMapController
+                      .namedMarkers["searchedLocation"].point))
+                statefulMapController.removeMarker(name: "searchedLocation");
+            },
             zoom: 13.0,
           ),
           layers: [
@@ -129,95 +199,33 @@ class __MapPageContentState extends State<_MapPageContent> {
                 'id': 'rajaomariajaona/ckbjppdr600h81iqj3lczkbon',
               },
             ),
-            MarkerLayerOptions(
-              markers: [],
+            MarkerLayerOptions(markers: statefulMapController.markers),
+            PolylineLayerOptions(polylines: statefulMapController.lines),
+            PolygonLayerOptions(
+              polygons: statefulMapController.polygons,
             ),
           ],
         ),
-        buildContainer(context),
-        Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: <Widget>[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.all(50.0),
-                  child: GestureDetector(
-                    onTap: () async {
-                      await goToMyLocation();
-                    },
-                    child: Container(
-                      decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.all(Radius.circular(50))),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20.0),
-                        child: Center(
-                          child: Icon(Icons.location_searching),
-                        ),
-                      ),
-                    ),
-                  ),
-                )
-              ],
-            ),
-          ],
-        ),
+        SearchWidget(
+          goToLocation: goToLocation,
+        )
       ],
     );
   }
 
-  Widget buildContainer(BuildContext context) {
-    return SearchBar<Fokontany>(
-      searchBarPadding: EdgeInsets.all(20),
-      listPadding: EdgeInsets.symmetric(horizontal: 10),
-      searchBarStyle: SearchBarStyle(
-          backgroundColor: Colors.white,
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4)),
-      onSearch: _getFokontany,
-      searchBarController: _searchBarController,
-      cancellationWidget: Icon(Icons.close),
-      mainAxisSpacing: 0,
-      crossAxisCount: 1,
-      onItemFound: (Fokontany fokontany, int index) {
-        return Card(
-          color: Colors.white,
-          child: ListTile(
-            title: Text("${fokontany.nom}, ${fokontany.province}"),
-            onTap: () {
-              _searchBarController.clear();
-              statefulMapController.mapController.move(
-                  LatLng(fokontany.centre["coordinates"][1],
-                      fokontany.centre["coordinates"][0]),
-                  15);
-            },
+  goToLocation(LatLng centre) {
+    if (!isReady) return;
+    statefulMapController.addMarker(
+        name: "searchedLocation",
+        marker: Marker(
+          point: LatLng(centre.latitude + 0.00001, centre.longitude + 0.00001),
+          builder: (ctx) => Icon(
+            Icons.location_on,
+            color: Colors.teal,
+            size: 30,
           ),
-        );
-      },
-    );
-  }
-}
-
-class Fokontany {
-  final String id;
-  final String nom;
-  final String province;
-  final Map centre;
-  Fokontany({
-    this.id,
-    this.nom,
-    this.province,
-    this.centre,
-  });
-  static Fokontany fromMap(Map<String, dynamic> map) {
-    if (map == null) return null;
-
-    return Fokontany(
-      id: map['id'],
-      nom: map['nom'],
-      province: map['province'],
-      centre: Map.from(map['centre']),
-    );
+        ));
+    statefulMapController.centerOnPoint(centre);
+    statefulMapController.zoomTo(16);
   }
 }
