@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:Markovid/provider/fokontany_provider.dart';
+import 'package:Markovid/views/drawer.dart';
 import 'package:Markovid/views/search_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
@@ -9,15 +10,20 @@ import 'package:location/location.dart';
 import 'package:map_controller/map_controller.dart';
 import 'package:provider/provider.dart';
 
-class MapPageController {
+class SearchWidgetController {
   void Function() goToMyLocation;
 }
 
 class MapPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final MapPageController controller = MapPageController();
+    final SearchWidgetController controller = SearchWidgetController();
+    final GlobalKey<ScaffoldState> scaffKey = GlobalKey<ScaffoldState>();
     return Scaffold(
+      key: scaffKey,
+      drawer: Drawer(
+        child: MyDrawer(),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           controller.goToMyLocation();
@@ -26,27 +32,32 @@ class MapPage extends StatelessWidget {
       ),
       body: SafeArea(
         child: _MapPageContent(
-          key: key,
-          mapPageController: controller,
-        ),
+            key: key,
+            searchWidgetController: controller,
+            openDrawer: () {
+              scaffKey.currentState.openDrawer();
+            }),
       ),
     );
   }
 }
 
 class _MapPageContent extends StatefulWidget {
-  _MapPageContent({Key key, @required this.mapPageController})
+  _MapPageContent(
+      {Key key,
+      @required this.searchWidgetController,
+      @required this.openDrawer})
       : super(key: key);
-  final MapPageController mapPageController;
-
+  final SearchWidgetController searchWidgetController;
+  final Function() openDrawer;
   @override
   __MapPageContentState createState() =>
-      __MapPageContentState(mapPageController);
+      __MapPageContentState(searchWidgetController);
 }
 
 class __MapPageContentState extends State<_MapPageContent> {
-  __MapPageContentState(MapPageController mapPageController) {
-    mapPageController.goToMyLocation = goToMyLocation;
+  __MapPageContentState(SearchWidgetController searchWidgetController) {
+    searchWidgetController.goToMyLocation = goToMyLocation;
   }
   MapController mapController;
 
@@ -78,11 +89,12 @@ class __MapPageContentState extends State<_MapPageContent> {
     super.initState();
   }
 
-  _addZone() {
-    statefulMapController.namedPolygons.keys.forEach((String key) {
-      if (key.startsWith('MG')) statefulMapController.removePolygon(key);
-    });
-    statefulMapController.removeMarkers(
+  _addZone() async {
+    final List<String> keys = statefulMapController.namedPolygons.keys.toList();
+    for (String key in keys) {
+      if (key.startsWith('MG')) await statefulMapController.removePolygon(key);
+    }
+    await statefulMapController.removeMarkers(
         names: statefulMapController.namedMarkers.keys
             .where((String key) => key.startsWith('MG'))
             .toList());
@@ -208,6 +220,7 @@ class __MapPageContentState extends State<_MapPageContent> {
         ),
         SearchWidget(
           goToLocation: goToLocation,
+          openDrawer: widget.openDrawer,
         )
       ],
     );

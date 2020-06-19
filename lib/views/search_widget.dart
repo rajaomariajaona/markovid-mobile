@@ -6,11 +6,14 @@ import 'package:provider/provider.dart';
 import 'package:Markovid/provider/fokontany_provider.dart';
 
 class SearchWidget extends StatefulWidget {
-  const SearchWidget({Key key, @required this.goToLocation}) : super(key: key);
+  const SearchWidget(
+      {Key key, @required this.goToLocation, @required this.openDrawer})
+      : super(key: key);
 
   @override
   _SearchWidgetState createState() => _SearchWidgetState();
   final Function(LatLng) goToLocation;
+  final Function() openDrawer;
 }
 
 class _SearchWidgetState extends State<SearchWidget> {
@@ -55,7 +58,9 @@ class _SearchWidgetState extends State<SearchWidget> {
                     IconButton(
                       splashColor: Colors.grey,
                       icon: Icon(Icons.menu),
-                      onPressed: () {},
+                      onPressed: () {
+                        widget.openDrawer();
+                      },
                     ),
                     Expanded(
                       child: TextField(
