@@ -4,6 +4,7 @@ import 'package:Markovid/views/map_page.dart';
 import 'package:Markovid/views/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 void main() {
   runApp(MyApp());
 }
@@ -28,7 +29,7 @@ class MyApp extends StatelessWidget {
           primarySwatch: Colors.teal,
           visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
-        initialRoute: "/",
+        initialRoute: kIsWeb? "/map":"/",
         routes: <String, Widget Function(BuildContext)>{
           "/": (ctx) => SplashScreen(),
           "/map": (ctx) => MapPage()

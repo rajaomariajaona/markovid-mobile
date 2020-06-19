@@ -102,7 +102,8 @@ class __MapPageContentState extends State<_MapPageContent> {
         names: statefulMapController.namedMarkers.keys
             .where((String key) => key.startsWith('MG'))
             .toList());
-    context.read<FokontanyProvider>().zoneRouge.forEach((element) {
+    FokontanyProvider fkt = context.read<FokontanyProvider>();
+    fkt.zoneRouge.forEach((element) {
       statefulMapController.addMarker(
           marker: element.getCentreMarker(), name: element.name);
       statefulMapController.addPolygon(
@@ -113,7 +114,7 @@ class __MapPageContentState extends State<_MapPageContent> {
         borderWidth: element.borderWidth,
       );
     });
-    context.read<FokontanyProvider>().zoneJaune.forEach((element) {
+    fkt.zoneJaune.forEach((element) {
       statefulMapController.addMarker(
           marker: element.getCentreMarker(), name: element.name);
       statefulMapController.addPolygon(
