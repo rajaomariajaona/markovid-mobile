@@ -1,10 +1,12 @@
 import 'package:Markovid/provider/fokontany_provider.dart';
 import 'package:Markovid/provider/socket_provider.dart';
 import 'package:Markovid/views/map_page.dart';
+import 'package:Markovid/views/map_page_web.dart';
 import 'package:Markovid/views/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+
 void main() {
   runApp(MyApp());
 }
@@ -29,9 +31,9 @@ class MyApp extends StatelessWidget {
           primarySwatch: Colors.teal,
           visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
-        initialRoute: kIsWeb? "/map":"/",
+        initialRoute: "/",
         routes: <String, Widget Function(BuildContext)>{
-          "/": (ctx) => SplashScreen(),
+          "/": (ctx) => kIsWeb ? MapPageWeb() : SplashScreen(),
           "/map": (ctx) => MapPage()
         },
       ),

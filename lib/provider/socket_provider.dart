@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:property_change_notifier/property_change_notifier.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
