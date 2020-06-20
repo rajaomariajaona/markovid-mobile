@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:Markovid/provider/fokontany_provider.dart';
 import 'package:Markovid/provider/socket_provider.dart';
 import 'package:Markovid/views/drawer.dart';
-import 'package:Markovid/views/search_widget.dart';
+import 'package:Markovid/views/search_widget_web.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -11,30 +11,24 @@ import 'package:location/location.dart';
 import 'package:map_controller/map_controller.dart';
 import 'package:provider/provider.dart';
 
-class SearchWidgetController {
+class SearchWidgetWebController {
   void Function() goToMyLocation;
 }
 
-class MapPage extends StatelessWidget {
+class MapPageWeb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final SearchWidgetController controller = SearchWidgetController();
+    final SearchWidgetWebController controller = SearchWidgetWebController();
     final GlobalKey<ScaffoldState> scaffKey = GlobalKey<ScaffoldState>();
     return Scaffold(
       key: scaffKey,
       drawer: Drawer(
         child: MyDrawer(),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          controller.goToMyLocation();
-        },
-        child: Icon(Icons.location_searching),
-      ),
       body: SafeArea(
-        child: _MapPageContent(
+        child: _MapPageWebContent(
             key: key,
-            searchWidgetController: controller,
+            searchWidgetWebController: controller,
             openDrawer: () {
               scaffKey.currentState.openDrawer();
             }),
@@ -43,22 +37,22 @@ class MapPage extends StatelessWidget {
   }
 }
 
-class _MapPageContent extends StatefulWidget {
-  _MapPageContent(
+class _MapPageWebContent extends StatefulWidget {
+  _MapPageWebContent(
       {Key key,
-      @required this.searchWidgetController,
+      @required this.searchWidgetWebController,
       @required this.openDrawer})
       : super(key: key);
-  final SearchWidgetController searchWidgetController;
+  final SearchWidgetWebController searchWidgetWebController;
   final Function() openDrawer;
   @override
-  __MapPageContentState createState() =>
-      __MapPageContentState(searchWidgetController);
+  __MapPageWebContentState createState() =>
+      __MapPageWebContentState(searchWidgetWebController);
 }
 
-class __MapPageContentState extends State<_MapPageContent> {
-  __MapPageContentState(SearchWidgetController searchWidgetController) {
-    searchWidgetController.goToMyLocation = goToMyLocation;
+class __MapPageWebContentState extends State<_MapPageWebContent> {
+  __MapPageWebContentState(SearchWidgetWebController searchWidgetWebController) {
+    searchWidgetWebController.goToMyLocation = goToMyLocation;
   }
   MapController mapController;
 
@@ -223,10 +217,27 @@ class __MapPageContentState extends State<_MapPageContent> {
             ),
           ],
         ),
-        SearchWidget(
+        SearchWidgetWeb(
           goToLocation: goToLocation,
           openDrawer: widget.openDrawer,
-        )
+        ),
+        Positioned(
+          bottom: 15,
+          right: 15,
+          height: 100,
+          child: Container(
+          color: Colors.white,
+          child: Column(
+            children: [
+              IconButton(icon: Icon(Icons.add), onPressed: (){
+                statefulMapController.zoomIn();
+              }),
+              IconButton(icon: Icon(Icons.remove), onPressed: (){
+                statefulMapController.zoomOut();
+              })
+            ],
+          ),
+        ))
       ],
     );
   }

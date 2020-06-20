@@ -3,6 +3,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+
 enum TtsState { playing, stopped, paused, continued }
 
 class SplashScreen extends StatefulWidget {

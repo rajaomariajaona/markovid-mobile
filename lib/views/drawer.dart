@@ -1,7 +1,7 @@
-import 'package:Markovid/provider/fokontany_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:url_launcher/url_launcher.dart';
 
 class MyDrawer extends StatelessWidget {
   @override
@@ -11,7 +11,7 @@ class MyDrawer extends StatelessWidget {
       child: Column(
         children: <Widget>[
           SizedBox(
-            height: size.height / 20,
+            height: kIsWeb? size.height / 40 : size.height / 20,
           ),
           Center(
               child: Image.asset(
@@ -46,6 +46,32 @@ class MyDrawer extends StatelessWidget {
             style: TextStyle(),
             textAlign: TextAlign.center,
           ),
+          if (kIsWeb) ...[
+            Text(
+              "MOBILE\n",
+              style: TextStyle(
+                  fontSize: size.height / 30, fontWeight: FontWeight.bold),
+            ),
+            GestureDetector(
+              onTap: () async {
+                const url =
+                    'https://github.com/rajaomariajaona/markovid-mobile/releases';
+                if (await canLaunch(url)) {
+                  await launch(url);
+                } else {
+                  throw 'Could not launch $url';
+                }
+              },
+              child: Text(
+                "Telechargez ici\n\n",
+                style: TextStyle(
+                  color: Colors.lightBlue,
+                  decoration: TextDecoration.underline
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
           Text(
             "AUTEUR\n",
             style: TextStyle(

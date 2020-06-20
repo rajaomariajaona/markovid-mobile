@@ -11,6 +11,7 @@ class FokontanyProvider extends PropertyChangeNotifier<String> {
   List<Fokontany> recherche = [];
   bool loading = false;
   CancelableOperation cancelableOperation;
+  CancelToken cancelToken = CancelToken();
   Future getFokontany(String text) async {
     loading = true;
     notifyListeners();
@@ -21,28 +22,35 @@ class FokontanyProvider extends PropertyChangeNotifier<String> {
       return;
     }
     if (cancelableOperation != null && !cancelableOperation.isCompleted) {
+      cancelToken.cancel();
       await cancelableOperation.cancel();
     }
     cancelableOperation = CancelableOperation.fromFuture(
       Future.delayed(Duration(seconds: 1)).then((_) async {
-        recherche = await _fetchFokontany(text);
+        recherche = await _fetchFokontany(text, cancelToken);
         loading = false;
         notifyListeners();
       }),
     );
   }
 
-  Future<List<Fokontany>> _fetchFokontany(String text) async {
+  Future<List<Fokontany>> _fetchFokontany(
+      String text, CancelToken cancelToken) async {
     Dio dio = await RestRequest().getDioInstance();
-    Response res = await dio.get("/?nom=$text");
+    Response res = await dio.get("/?nom=$text", cancelToken: cancelToken);
     List<Fokontany> liste = [];
     for (dynamic d in res.data) {
-      liste.add(Fokontany(
+      liste.add(
+        Fokontany(
           centre: LatLng(d["centre"]["coordinates"][1] as double,
               d["centre"]["coordinates"][0] as double),
           id: d["id"],
           nom: d["nom"],
-          province: d["province"]));
+          province: d["province"],
+          casConfirme: d["casConfirme"],
+          casSuspect: d["casSuspect"],
+        ),
+      );
     }
     return liste;
   }
