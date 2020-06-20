@@ -220,7 +220,24 @@ class __MapPageWebContentState extends State<_MapPageWebContent> {
         SearchWidgetWeb(
           goToLocation: goToLocation,
           openDrawer: widget.openDrawer,
-        )
+        ),
+        Positioned(
+          bottom: 15,
+          right: 15,
+          height: 100,
+          child: Container(
+          color: Colors.white,
+          child: Column(
+            children: [
+              IconButton(icon: Icon(Icons.add), onPressed: (){
+                statefulMapController.zoomIn();
+              }),
+              IconButton(icon: Icon(Icons.remove), onPressed: (){
+                statefulMapController.zoomOut();
+              })
+            ],
+          ),
+        ))
       ],
     );
   }
